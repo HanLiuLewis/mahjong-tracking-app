@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Players - Mahjong Tracker{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>👥 Manage Players</h1>
+    <p>Add or remove players</p>
+</div>
+
+<div class="content">
+    <div id="alert-container"></div>
+    
+    <!-- Add Player Form -->
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #667eea; margin-bottom: 15px;">Add New Player</h3>
+        <form id="add-player-form" style="display: flex; gap: 10px; align-items: center;">
+            <input 
+                type="text" 
+                id="player_name" 
+                name="player_name" 
+                required 
+                placeholder="Enter player name"
+                style="flex: 1; padding: 14px 18px; font-size: 16px; border: 2px solid #e9ecef; border-radius: 10px; outline: none; transition: all 0.3s;"
+                onfocus="this.style.borderColor='#667eea'"
+                onblur="this.style.borderColor='#e9ecef'"
+            >
+            <button 
+                type="submit" 
+                style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s;"
+                onmouseover="this.style.transform='scale(1.05)'"
+                onmouseout="this.style.transform='scale(1)'"
+            >+</button>
+        </form>
+    </div>
+    
+    <!-- Players List -->
+    <div>
+        <h3 style="color: #667eea; margin-bottom: 15px;">Current Players</h3>
+        <div id="players-list">
+            <p style="color: #666; text-align: center; padding: 20px;">Loading players...</p>
+        </div>
+    </div>
+    
+    <a href="{{ url_for('index') }}" class="btn btn-secondary" style="margin-top: 30px; display: inline-block;">
+        ← Back to Home
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load players on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadPlayers();
+});
+
+// Add player form submission
+document.getElementById('add-player-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const playerName = document.getElementById('player_name').value.trim();
+    
+    if (!playerName) {
+        showAlert('Please enter a player name', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/players', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: playerName })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('Player added successfully!', 'success');
+            document.getElementById('player_name').value = '';
+            loadPlayers();
+        } else {
+            showAlert(result.error || 'Failed to add player', 'error');
+        }
+    } catch (error) {
+        showAlert('Failed to add player. Please try again.', 'error');
+    }
+});
+
+async function loadPlayers() {
+    try {
+        const response = await fetch('/api/players');
+        const data = await response.json();
+        
+        const playersList = document.getElementById('players-list');
+        
+        if (data.players.length === 0) {
+            playersList.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No players added yet.</p>';
+            return;
+        }
+        
+        playersList.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                ${data.players.map(player => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; background: #f8f9fa; border-radius: 12px; border: 2px solid #e9ecef; transition: all 0.2s;">
+                        <span style="font-weight: 500; font-size: 18px; color: #333;">${player.name}</span>
+                        <button 
+                            onclick="deletePlayer(${player.id}, '${player.name.replace(/'/g, "\\'")}')" 
+                            style="width: 40px; height: 40px; border-radius: 50%; background: #dc3545; color: white; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; flex-shrink: 0;"
+                            onmouseover="this.style.transform='scale(1.1)'; this.style.background='#c82333'"
+                            onmouseout="this.style.transform='scale(1)'; this.style.background='#dc3545'"
+                        >×</button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        document.getElementById('players-list').innerHTML = '<p style="color: #dc3545; text-align: center; padding: 20px;">Failed to load players.</p>';
+    }
+}
+
+async function deletePlayer(playerId, playerName) {
+    if (!confirm(`Are you sure you want to delete player "${playerName}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/players/${playerId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('Player deleted successfully!', 'success');
+            loadPlayers();
+        } else {
+            showAlert(result.error || 'Failed to delete player', 'error');
+        }
+    } catch (error) {
+        showAlert('Failed to delete player. Please try again.', 'error');
+    }
+}
+
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alert-container');
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+    
+    alertContainer.innerHTML = `
+        <div class="alert ${alertClass}">
+            ${message}
+        </div>
+    `;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        alertContainer.innerHTML = '';
+    }, 3000);
+    
+    // Scroll to alert
+    alertContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+{% endblock %}
+

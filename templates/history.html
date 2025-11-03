@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}History - Mahjong Tracker{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>📊 Game History</h1>
+    <p>View and analyze past games</p>
+</div>
+
+<div class="content">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary" style="margin-bottom: 20px;">← Back to Home</a>
+    
+    {% if games %}
+        <div style="margin-bottom: 20px;">
+            <button id="calculate-totals-btn" class="btn btn-success" disabled>
+                Calculate Total Points for Selected Games
+            </button>
+        </div>
+        
+        <div id="totals-container" style="display: none; margin-bottom: 20px;">
+            <h2 style="color: #667eea; margin-bottom: 15px;">Total Points</h2>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Total Points</th>
+                    </tr>
+                </thead>
+                <tbody id="totals-body">
+                </tbody>
+            </table>
+        </div>
+        
+        {% for game in games %}
+        <div class="game-card" style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h3 style="color: #667eea; margin-bottom: 5px;">Game #{{ game.id }}</h3>
+                    <p style="color: #6c757d; font-size: 14px;">{{ game.created_at }}</p>
+                </div>
+                <input type="checkbox" class="game-checkbox" data-game-id="{{ game.id }}" 
+                       style="width: 24px; height: 24px; cursor: pointer;">
+            </div>
+            
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Score</th>
+                        <th>Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in game.players %}
+                    <tr>
+                        <td>{{ player.name }}</td>
+                        <td>{{ player.score|int }}</td>
+                        <td class="{% if player.points >= 0 %}positive{% else %}negative{% endif %}">
+                            {% if player.points >= 0 %}+{% endif %}{{ player.points }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-error">
+            No games recorded yet. Add your first game to get started!
+        </div>
+        <a href="{{ url_for('add_game') }}" class="btn">Add a Game</a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const checkboxes = document.querySelectorAll('.game-checkbox');
+const calculateBtn = document.getElementById('calculate-totals-btn');
+
+checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateCalculateButton);
+});
+
+function updateCalculateButton() {
+    const selectedCount = document.querySelectorAll('.game-checkbox:checked').length;
+    calculateBtn.disabled = selectedCount === 0;
+}
+
+calculateBtn.addEventListener('click', async () => {
+    const selectedGameIds = Array.from(document.querySelectorAll('.game-checkbox:checked'))
+        .map(cb => parseInt(cb.dataset.gameId));
+    
+    if (selectedGameIds.length === 0) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/calculate_totals', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ game_ids: selectedGameIds })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            displayTotals(result.totals);
+        } else {
+            alert(result.error || 'An error occurred');
+        }
+    } catch (error) {
+        alert('Failed to calculate totals. Please try again.');
+    }
+});
+
+function displayTotals(totals) {
+    const container = document.getElementById('totals-container');
+    const tbody = document.getElementById('totals-body');
+    
+    tbody.innerHTML = '';
+    
+    totals.forEach(player => {
+        const row = document.createElement('tr');
+        const pointsClass = player.total_points >= 0 ? 'positive' : 'negative';
+        
+        row.innerHTML = `
+            <td><strong>${player.name}</strong></td>
+            <td class="${pointsClass}">${player.total_points > 0 ? '+' : ''}${player.total_points}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    container.style.display = 'block';
+    
+    // Scroll to totals
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{% endblock %}
+

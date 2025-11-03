@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Add Game - Mahjong Tracker{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>➕ Add a Game</h1>
+    <p>Enter player names and scores</p>
+</div>
+
+<div class="content">
+    <div id="alert-container"></div>
+    
+    <form id="game-form">
+        <div class="player-row">
+            <h3>Player 1</h3>
+            <div class="form-group">
+                <label for="player1_name">Name</label>
+                <select id="player1_name" name="player1_name" required>
+                    <option value="">Select a player</option>
+                    {% for player in players %}
+                    <option value="{{ player }}">{{ player }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="player1_score">Score (multiple of 100)</label>
+                <input type="number" id="player1_score" name="player1_score" step="100" required>
+            </div>
+        </div>
+        
+        <div class="player-row">
+            <h3>Player 2</h3>
+            <div class="form-group">
+                <label for="player2_name">Name</label>
+                <select id="player2_name" name="player2_name" required>
+                    <option value="">Select a player</option>
+                    {% for player in players %}
+                    <option value="{{ player }}">{{ player }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="player2_score">Score (multiple of 100)</label>
+                <input type="number" id="player2_score" name="player2_score" step="100" required>
+            </div>
+        </div>
+        
+        <div class="player-row">
+            <h3>Player 3</h3>
+            <div class="form-group">
+                <label for="player3_name">Name</label>
+                <select id="player3_name" name="player3_name" required>
+                    <option value="">Select a player</option>
+                    {% for player in players %}
+                    <option value="{{ player }}">{{ player }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="player3_score">Score (multiple of 100)</label>
+                <input type="number" id="player3_score" name="player3_score" step="100" required>
+            </div>
+        </div>
+        
+        <div class="player-row">
+            <h3>Player 4</h3>
+            <div class="form-group">
+                <label for="player4_name">Name</label>
+                <select id="player4_name" name="player4_name" required>
+                    <option value="">Select a player</option>
+                    {% for player in players %}
+                    <option value="{{ player }}">{{ player }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="player4_score">Score (multiple of 100)</label>
+                <input type="number" id="player4_score" name="player4_score" step="100" required>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-success">Calculate & Save</button>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+    
+    <div id="results-container" style="display: none;">
+        <h2 style="margin-top: 30px; color: #667eea;">Game Results</h2>
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Score</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody id="results-body">
+            </tbody>
+        </table>
+        <a href="{{ url_for('index') }}" class="btn" style="margin-top: 20px;">Back to Home</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('game-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = {};
+    
+    for (let [key, value] of formData.entries()) {
+        data[key] = value;
+    }
+    
+    try {
+        const response = await fetch('/calculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            // Show results
+            displayResults(result.results);
+            
+            // Hide form
+            document.getElementById('game-form').style.display = 'none';
+            
+            // Show results container
+            document.getElementById('results-container').style.display = 'block';
+            
+            // Show success message
+            showAlert('Game saved successfully!', 'success');
+        } else {
+            showAlert(result.error || 'An error occurred', 'error');
+        }
+    } catch (error) {
+        showAlert('Failed to save game. Please try again.', 'error');
+    }
+});
+
+function displayResults(results) {
+    const tbody = document.getElementById('results-body');
+    tbody.innerHTML = '';
+    
+    results.forEach((player) => {
+        const row = document.createElement('tr');
+        const pointsClass = player.points >= 0 ? 'positive' : 'negative';
+        
+        row.innerHTML = `
+            <td>${player.name}</td>
+            <td>${player.score.toLocaleString()}</td>
+            <td class="${pointsClass}">${player.points > 0 ? '+' : ''}${player.points}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alert-container');
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+    
+    alertContainer.innerHTML = `
+        <div class="alert ${alertClass}">
+            ${message}
+        </div>
+    `;
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+</script>
+{% endblock %}
+

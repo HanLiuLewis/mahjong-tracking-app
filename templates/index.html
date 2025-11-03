@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Mahjong Tracker{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h1>🀄 Mahjong Tracker</h1>
+    <p>Keep track of your game scores</p>
+</div>
+
+<div class="content">
+    <a href="{{ url_for('add_game') }}" class="btn">
+        ➕ Add a Game
+    </a>
+    
+    <a href="{{ url_for('history') }}" class="btn btn-secondary">
+        📊 View History
+    </a>
+    
+    <a href="{{ url_for('manage_players') }}" class="btn btn-secondary">
+        👥 Manage Players
+    </a>
+</div>
+{% endblock %}
+
