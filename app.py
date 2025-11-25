@@ -389,5 +389,5 @@ def stats():
 if __name__ == '__main__':
     init_db()
     # Run on all interfaces so it's accessible externally
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
 

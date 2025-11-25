@@ -2,6 +2,59 @@
 
 {% block title %}History - Mahjong Tracker{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Custom scrollbar styling for stats table */
+#stats-container ::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+#stats-container ::-webkit-scrollbar-track {
+    background: #e9ecef;
+    border-radius: 4px;
+}
+
+#stats-container ::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+#stats-container ::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}
+
+/* Add shadow to indicate scrollable content */
+#stats-table thead th {
+    background: #667eea;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Sticky first column (Player name) */
+#stats-table th:first-child,
+#stats-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #667eea;
+}
+
+#stats-table thead th:first-child {
+    z-index: 15;
+    background: #667eea;
+}
+
+#stats-table tbody td:first-child {
+    background: #f8f9fa;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+}
+
+#stats-table tbody tr:hover td:first-child {
+    background: #f8f9fa;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="header">
     <h1>📊 Game History</h1>
@@ -37,25 +90,35 @@
                 </tbody>
             </table>
         </div>
-        <div id="stats-container" style="display:none; margin-bottom:20px; background:#fff; padding:16px; border-radius:8px;">
-            <h2 style="color:#333; margin-bottom:12px;">Database Statistics</h2>
-            <div id="stats-summary" style="margin-bottom:12px; color:#555;"></div>
-            <table class="results-table" id="stats-table" style="width:100%; display:none;">
-                <thead>
-                    <tr>
-                        <th>Player</th>
-                        <th>1st</th>
-                        <th>2nd</th>
-                        <th>3rd</th>
-                        <th>4th</th>
-                        <th>Games</th>
-                        <th>Total Points</th>
-                        <th>Avg Points</th>
-                        <th>Avg Pos</th>
-                    </tr>
-                </thead>
-                <tbody id="stats-body"></tbody>
-            </table>
+        <div id="stats-container" style="display:none; margin-bottom:20px; background:#f8f9fa; padding:16px; border-radius:12px; border: 2px solid #e9ecef;">
+            <h2 style="color:#667eea; margin-bottom:12px;">📊 Database Statistics</h2>
+            <div id="stats-summary" style="margin-bottom:16px; color:#555; font-weight: 500;"></div>
+            
+            <!-- Horizontal scroll wrapper for mobile -->
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px;">
+                <!-- Vertical scroll wrapper with max 10 rows -->
+                <div style="max-height: 520px; overflow-y: auto;">
+                    <table class="results-table" id="stats-table" style="min-width: 800px; display:none; margin-bottom: 0;">
+                        <thead style="position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th style="min-width: 100px;">Player</th>
+                                <th style="min-width: 60px;">1st</th>
+                                <th style="min-width: 60px;">2nd</th>
+                                <th style="min-width: 60px;">3rd</th>
+                                <th style="min-width: 60px;">4th</th>
+                                <th style="min-width: 70px;">Games</th>
+                                <th style="min-width: 100px;">Total Pts</th>
+                                <th style="min-width: 90px;">Avg Pts</th>
+                                <th style="min-width: 80px;">Avg Pos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="stats-note" style="margin-top: 12px; font-size: 13px; color: #6c757d; display: none;">
+                💡 Swipe left/right to see all columns
+            </div>
         </div>
 
         {% for game in games %}
@@ -219,10 +282,14 @@ if (showStatsBtn) {
             if (!res.ok) throw new Error('Failed to fetch stats');
             const data = await res.json();
 
-            statsSummary.textContent = `Total games: ${data.total_games || 0}`;
+            const players = data.players || [];
+            const totalPlayers = players.length;
+            
+            statsSummary.textContent = `Total games: ${data.total_games || 0} | Players: ${totalPlayers}`;
             statsBody.innerHTML = '';
 
-            (data.players || []).forEach(p => {
+            // Show all players (table will scroll if more than 10)
+            players.forEach(p => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${p.name}</strong></td>
@@ -238,7 +305,14 @@ if (showStatsBtn) {
                 statsBody.appendChild(tr);
             });
 
-            statsTable.style.display = (data.players && data.players.length) ? '' : 'none';
+            statsTable.style.display = players.length ? '' : 'none';
+            
+            // Show swipe hint on mobile
+            const statsNote = document.getElementById('stats-note');
+            if (statsNote && window.innerWidth < 768) {
+                statsNote.style.display = 'block';
+            }
+            
             statsContainer.style.display = 'block';
             statsContainer.scrollIntoView({ behavior: 'smooth' });
         } catch (err) {
